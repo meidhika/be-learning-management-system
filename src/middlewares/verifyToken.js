@@ -2,7 +2,7 @@ import jwt from "jsonwebtoken";
 import userModel from "../models/userModel.js";
 
 export const verifyToken = async (req, res, next) => {
-  const secretKey = process.env.JWT_SECRET_KEY ?? "";
+  const secretKey = process.env.SECRET_KEY_JWT ?? "";
 
   if (req?.headers?.authorization?.split(" ")[0] === "JWT") {
     const decoded = jwt.verify(

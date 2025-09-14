@@ -16,12 +16,12 @@ import {
 } from "../controllers/courseController.js";
 import { verifyToken } from "../middlewares/verifyToken.js";
 import multer from "multer";
+import { fileFilter, fileStorageCourse } from "../utils/multer.js";
 import { validateRequest } from "../middlewares/validateRequest.js";
 import {
   addStudentCourseSchema,
   mutateContentSchema,
 } from "../utils/schema.js";
-import { fileFilter, fileStorageCourse } from "../utils/multer.js";
 
 const courseRoutes = express.Router();
 

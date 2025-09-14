@@ -5,28 +5,30 @@ import transactionModel from "../models/transactionModel.js";
 import jwt from "jsonwebtoken";
 
 export const signUpAction = async (req, res) => {
-  const mindtransUrl = process.env.MIDTRANS_URL;
+  const midtransUrl = process.env.MIDTRANS_URL;
   const midtransAuthString = process.env.MIDTRANS_AUTH_STRING;
 
   try {
-    const body = req.body;
+    const body = req.body; // name, email, password
+
     const hashPassword = bcrypt.hashSync(body.password, 12);
 
     const user = new userModel({
       name: body.name,
       email: body.email,
+      photo: "default.png",
       password: hashPassword,
       role: "manager",
-      photo: "default.png",
     });
 
     // action payment gateway midtrans
+
     const transaction = new TransactionModel({
       user: user._id,
       price: 280000,
     });
 
-    const midtrans = await fetch(mindtransUrl, {
+    const midtrans = await fetch(midtransUrl, {
       method: "POST",
       body: JSON.stringify({
         transaction_details: {
@@ -40,7 +42,7 @@ export const signUpAction = async (req, res) => {
           email: user.email,
         },
         callbacks: {
-          finish: "http://localhost:5173/success-checkout/",
+          finish: "http://localhost:5173/success-checkout",
         },
       }),
       headers: {
@@ -54,67 +56,80 @@ export const signUpAction = async (req, res) => {
     await user.save();
     await transaction.save();
 
-    return res.status(200).json({
-      message: "Success",
-      data: { midtrans_payment_url: resMidtrans.redirect_url },
+    return res.json({
+      message: "Sign Up Success",
+      data: {
+        midtrans_payment_url: resMidtrans.redirect_url,
+      },
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };
 
 export const signInAction = async (req, res) => {
   try {
-    const body = req.body;
-    const exsistingUser = await userModel
+    const body = req.body; // email, password
+
+    const existingUser = await userModel
       .findOne()
       .where("email")
       .equals(body.email);
 
-    if (!exsistingUser) {
-      return res.status(404).json({ message: "User Not Found" });
+    if (!existingUser) {
+      return res.status(400).json({
+        message: "User not found",
+      });
     }
 
-    const isPasswordMatch = bcrypt.compareSync(
+    const comparePassword = bcrypt.compareSync(
       body.password,
-      exsistingUser.password
+      existingUser.password
     );
 
-    if (!isPasswordMatch) {
-      return res.status(401).json({ message: "Invalid Email / Password" });
+    if (!comparePassword) {
+      return res.status(400).json({
+        message: "Email / password incorrect",
+      });
     }
 
     const isValidUser = await transactionModel.findOne({
-      user: exsistingUser._id,
-      status: "pending",
+      user: existingUser._id,
+      status: "success",
     });
 
-    if (exsistingUser.role === "student" && !isValidUser) {
-      return res.status(401).json({ message: "User Not Verified" });
+    if (existingUser.role !== "student" && !isValidUser) {
+      return res.status(400).json({
+        message: "User not verified",
+      });
     }
 
     const token = jwt.sign(
       {
         data: {
-          id: exsistingUser._id.toString(),
+          id: existingUser._id.toString(),
         },
       },
-      process.env.JWT_SECRET_KEY,
+      process.env.SECRET_KEY_JWT,
       { expiresIn: "1 days" }
     );
 
     return res.json({
       message: "User Logged in success",
       data: {
-        name: exsistingUser.name,
-        email: exsistingUser.email,
+        name: existingUser.name,
+        email: existingUser.email,
         token,
-        role: exsistingUser.role,
+        role: existingUser.role,
       },
     });
   } catch (error) {
     console.log(error);
-    return res.status(500).json({ message: "Internal Server Error" });
+    return res.status(500).json({
+      message: "Internal server error",
+    });
   }
 };

@@ -5,17 +5,18 @@ export default function connectDB() {
 
   try {
     mongoose.connect(DATABASE_URL);
-    console.log("Database connected");
   } catch (error) {
     console.log(error);
     process.exit(1);
   }
 
   const dbConn = mongoose.connection;
-  dbConn.once("open", (_) =>
-    console.log(`Database Connected: ${DATABASE_URL} `)
-  );
+
+  dbConn.once("open", (_) => {
+    console.log(`Database Connected: ${DATABASE_URL}`);
+  });
+
   dbConn.on("error", (err) => {
-    console.log(`Connection Error: ${err}`);
+    console.error(`Connection Error: ${err}`);
   });
 }
